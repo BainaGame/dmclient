@@ -10,12 +10,16 @@ package
 	
 	import flash.display.DisplayObject;
 	import flash.display.Graphics;
+	import flash.display.Shape;
 	import flash.display.Sprite;
 	import flash.display.StageDisplayState;
+	import flash.display.StageScaleMode;
 	import flash.events.Event;
 	import flash.events.HTMLUncaughtScriptExceptionEvent;
 	import flash.events.MouseEvent;
 	import flash.events.TimerEvent;
+	import flash.filters.GlowFilter;
+	import flash.geom.Rectangle;
 	import flash.html.HTMLLoader;
 	import flash.net.URLRequest;
 	import flash.system.Capabilities;
@@ -25,7 +29,7 @@ package
 	import flash.text.TextFormatAlign;
 	import flash.utils.Timer;
 	
-	[SWF(width=1024,height=768,frameRate=60,backgroundColor=0x000000)]
+	[SWF(width=1024,height=768,frameRate=60)]
 	public class danmuas extends Sprite
 	{
 		private var designHeight:int = 768;
@@ -42,37 +46,54 @@ package
 		private var idleLines:Array;
 		
 		/** 配置信息，颜色列表，最大字号，最小字号*/
-		private var config:Object = {font:[20,50],time:[4,7],color:[0xFAEBD7,0xF0F8FF,0xF5F5DC,0xFFE4C4,0xFFEBCD,0xD2691E]};
-		
-//		古董白 #FAEBD7
-//		爱丽丝蓝 #F0F8FF
-//		米　色 #F5F5DC
-//		陶坯黄 #FFE4C4
-//		杏仁白 #FFEBCD
-//		军服蓝 #5F9EA0
-//		查特酒绿 #7FFF00
-//		巧克力色 #D2691E
-//		珊瑚红 #FF7F50
-//		绯　红 #DC143C
-//		深卡其色 #BDB76B
-//		深品红 #8B008B
-//		金　色 #FFD700
+		private var config:Object = {font:[40,80],time:[6,9],color:[0xff3399,0x0066cc,0x6ff66,0xFFff33,0x9900ff,0xcc00ff,009966]};
 		
 		private var htmlLoader:HTMLLoader;
 		
 		public function danmuas()
 		{
+			
 			stage.nativeWindow.alwaysInFront = true;
 			stage.nativeWindow.orderToFront();
-			stage.displayState = StageDisplayState.FULL_SCREEN;
+			
+			stage.nativeWindow.width = Capabilities.screenResolutionX;
+			stage.nativeWindow.height = Capabilities.screenResolutionY;
+			
+			stage.scaleMode = StageScaleMode.EXACT_FIT;
+			
+			trace(stage.nativeWindow.bounds);
 			
 			init();
+			
+			showIndicator(10,0);
+		}
+		
+		/**
+		 * 显示指示器，知道窗口知否置顶了
+		 */
+		private function showIndicator(offsetX:Number,offsetY:Number):void
+		{
+			var shape:Shape = new Shape();
+			var graphic:Graphics = shape.graphics;
+			
+			var width:int = 3;
+			
+			graphic.beginFill(0);
+			graphic.drawRect(0,0,width,width);
+			graphic.drawRect(width,width,width,width);
+			graphic.beginFill(0xffffff);
+			graphic.drawRect(0,width,width,width);
+			graphic.drawRect(width,0,width,width);
+			graphic.endFill();
+			
+			container.addChild(shape);
 		}
 		
 		private function init():void
 		{
 			timer = new Timer(100);
 			container = new Sprite();
+			
 			addChild(container);
 			
 			initHtmlLoader();
@@ -83,7 +104,7 @@ package
 		{
 			this.htmlLoader = new HTMLLoader();
 			this.htmlLoader.window.myJSCallAS = myJSCallAS;
-			this.htmlLoader.load(new URLRequest("http://123.59.82.49:4000/client.html"));
+			this.htmlLoader.load(new URLRequest("http://123.59.82.49/client.html"));
 			this.htmlLoader.addEventListener(Event.COMPLETE,completeHandler);
 			this.htmlLoader.addEventListener(HTMLUncaughtScriptExceptionEvent.UNCAUGHT_SCRIPT_EXCEPTION,exceptionHandler);
 		}
@@ -131,6 +152,7 @@ package
 		private function showOneMessageByLine(lineNum:int,msg:String):void 
 		{
 			var text:TextField = new TextField();
+			text.filters = [new GlowFilter(0xffffff,1,2,2,255)];
 			text.autoSize = TextFieldAutoSize.LEFT;
 			
 			var textFormat:TextFormat = new TextFormat();
