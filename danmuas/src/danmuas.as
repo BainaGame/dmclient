@@ -64,7 +64,10 @@ package
 		{
 			stage.nativeWindow.alwaysInFront = true;
 			stage.nativeWindow.orderToFront();
-			stage.displayState = StageDisplayState.FULL_SCREEN;
+			stage.nativeWindow.width = Capabilities.screenResolutionX;
+			stage.nativeWindow.height = Capabilities.screenResolutionY;
+			stage.nativeWindow.x = 0;
+			stage.nativeWindow.y = 0;
 			
 			init();
 		}
@@ -83,7 +86,7 @@ package
 		{
 			this.htmlLoader = new HTMLLoader();
 			this.htmlLoader.window.myJSCallAS = myJSCallAS;
-			this.htmlLoader.load(new URLRequest("http://123.59.82.49:4000/client.html"));
+			this.htmlLoader.load(new URLRequest("http://123.59.82.49/client.html"));
 			this.htmlLoader.addEventListener(Event.COMPLETE,completeHandler);
 			this.htmlLoader.addEventListener(HTMLUncaughtScriptExceptionEvent.UNCAUGHT_SCRIPT_EXCEPTION,exceptionHandler);
 		}
@@ -152,7 +155,7 @@ package
 			TweenLite.to(text,
 				this.getRandomNumber(config.time[0],config.time[1]),
 				{
-					x:-text.width,
+					x:-text.width*2,
 					onComplete:onLineComplete,
 					onCompleteParams:[lineNum, text],
 					ease:Sine.easeInOut
