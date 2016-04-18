@@ -46,7 +46,7 @@ package
 		private var idleLines:Array;
 		
 		/** 配置信息，颜色列表，最大字号，最小字号*/
-		private var config:Object = {font:[40,80],time:[6,9],color:[0xff3399,0x0066cc,0x6ff66,0xFFff33,0x9900ff,0xcc00ff,009966]};
+		private var config:Object = {font:[50,80],time:[6,9],color:[0xff3399,0x0066cc,0x6ff66,0xFFff33,0x9900ff,0xcc00ff,009966]};
 		
 		private var htmlLoader:HTMLLoader;
 		
@@ -113,7 +113,7 @@ package
 		{
 			idleLines = [];
 			
-			var numLines:int = designHeight / designLineHeight;
+			var numLines:int = (designHeight-config.font[1]) / designLineHeight;
 			for(var i:int=0;i<numLines;i++)
 			{
 				idleLines.push(i);
@@ -132,7 +132,7 @@ package
 		
 		private function completeHandler(evt:Event):void
 		{
-			showOneMessage("加载完成");
+			showOneMessageByLine(0,"加载完成",40);
 		}
 		
 		private function showOneMessage(msg:String):void
@@ -149,7 +149,7 @@ package
 		}
 		
 		/**显示一条弹幕*/
-		private function showOneMessageByLine(lineNum:int,msg:String):void 
+		private function showOneMessageByLine(lineNum:int,msg:String,size:int=40):void 
 		{
 			var text:TextField = new TextField();
 			text.filters = [new GlowFilter(0xffffff,1,2,2,255)];
@@ -157,7 +157,7 @@ package
 			
 			var textFormat:TextFormat = new TextFormat();
 			textFormat.color = this.getArrayRandom(config.color);
-			textFormat.size = this.getRandomInt(config.font[0],config.font[1]);
+			textFormat.size = size || this.getRandomInt(config.font[0],config.font[1]);
 			textFormat.font = "微软雅黑";
 			textFormat.align = TextFormatAlign.LEFT;
 			
@@ -168,11 +168,11 @@ package
 			
 			this.container.addChild(text);
 			
-			text.x = Capabilities.screenResolutionX;
-			text.y = designHeight - lineNum * designLineHeight - config.font[1];
+			text.x = designWidth;
+			text.y = designHeight - lineNum * designLineHeight - text.height;
 			
 			TweenLite.to(text,
-				this.getRandomNumber(config.time[0],config.time[1]),
+				this.getRandomNumber(config.time[0],config.time[1])*(designWidth+text.width)/designWidth,
 				{
 					x:-text.width,
 					onComplete:onLineComplete,
