@@ -2,7 +2,7 @@ package
 {
 	/**
 	 * 
-	 * 屏幕分成很多行，每一行同一时刻只有一行文字，一行结束后才可以显示下一行
+	 * 屏幕分成很多行，每在一行上增加一个弹幕，则这个行号会被移动到列表尾部，增加弹幕时会从列表前面随机找一个行号来显示
 	 * 
 	 * */
 	import com.greensock.TweenLite;
@@ -12,22 +12,20 @@ package
 	import flash.display.Graphics;
 	import flash.display.Shape;
 	import flash.display.Sprite;
-	import flash.display.StageDisplayState;
 	import flash.display.StageScaleMode;
 	import flash.events.Event;
 	import flash.events.HTMLUncaughtScriptExceptionEvent;
+	import flash.events.KeyboardEvent;
 	import flash.events.MouseEvent;
-	import flash.events.TimerEvent;
-	import flash.filters.GlowFilter;
-	import flash.geom.Rectangle;
 	import flash.html.HTMLLoader;
+	import flash.net.FileReference;
 	import flash.net.URLRequest;
 	import flash.system.Capabilities;
 	import flash.text.TextField;
 	import flash.text.TextFieldAutoSize;
 	import flash.text.TextFormat;
 	import flash.text.TextFormatAlign;
-	import flash.utils.Timer;
+	import flash.ui.Keyboard;
 	
 	[SWF(width=1024,height=768,frameRate=60)]
 	public class danmuas extends Sprite
@@ -36,23 +34,22 @@ package
 		private var designWidth:int = 1024;
 		private var designLineHeight:int = 20;
 		
-		private var timer:Timer;
-		
 		private var container:Sprite;
 		
-		private var dataList:Array;
+		private var msgArr:Array = [];
 		
-		/**空闲行号列表*/
+		/**空闲行号列表,每在一行上增加一个弹幕，则这个行号会被移动到列表尾部*/
 		private var idleLines:Array;
 		
 		/** 配置信息，颜色列表，最大字号，最小字号*/
-		private var config:Object = {font:[50,80],time:[6,9],color:[0xff3399,0x0066cc,0x6ff66,0xFFff33,0x9900ff,0xcc00ff,009966]};
+		private var config:Object = {font:[45,80],time:[6,9],color:[0xff3399,0x0066cc,0x6ff66,0xFFff33,0x9900ff,0xcc00ff,009966]};
 		
 		private var htmlLoader:HTMLLoader;
 		
+		private var resultText:TextField;
+		
 		public function danmuas()
 		{
-			
 			stage.nativeWindow.alwaysInFront = true;
 			stage.nativeWindow.orderToFront();
 			
@@ -61,11 +58,17 @@ package
 			
 			stage.scaleMode = StageScaleMode.EXACT_FIT;
 			
-			trace(stage.nativeWindow.bounds);
-			
 			init();
 			
 			showIndicator(10,0);
+			
+			stage.nativeWindow.addEventListener(Event.ACTIVATE,function (evt:Event):void{
+				trace("asdfasdf")
+			});
+			
+			stage.nativeWindow.addEventListener(Event.CLOSING,function(evt:Event):void{
+				trace("closing");
+			});
 		}
 		
 		/**
@@ -89,15 +92,89 @@ package
 			container.addChild(shape);
 		}
 		
+		/**
+		 * 初始化结果文本框
+		 */
+		private function initResultText():void
+		{
+			resultText = new TextField();
+			resultText.width = 800;
+			resultText.height = 600;
+			resultText.multiline = true;
+			resultText.background = true;
+			resultText.border = true;
+			
+			var textFormat:TextFormat = new TextFormat();
+			textFormat.size = 30;
+			textFormat.align = TextFormatAlign.CENTER;
+			
+			resultText.defaultTextFormat = textFormat;
+			
+			resultText.x = (designWidth-resultText.width)/2;
+			resultText.y = (designHeight-resultText.height)/2;
+			
+			resultText.text = "";
+			
+			addChild(resultText);
+			
+			hideResult();
+		}
+		
 		private function init():void
 		{
-			timer = new Timer(100);
 			container = new Sprite();
 			
 			addChild(container);
 			
 			initHtmlLoader();
 			initLines();
+			
+			initResultText();
+			
+			KeyState.setStage(stage);
+			stage.addEventListener(KeyboardEvent.KEY_DOWN,keyDownHandler);
+		}
+		
+		private function keyDownHandler (evt:KeyboardEvent):void
+		{
+			if (evt.keyCode == Keyboard.M && evt.ctrlKey)
+			{
+				trace("按了 ctrl m");
+				showResult();
+			}
+			
+			if (evt.keyCode == Keyboard.M && evt.ctrlKey && evt.shiftKey )
+			{
+				trace("按了 ctrl M");
+				hideResult();
+			}
+			
+			if (evt.keyCode == Keyboard.S &&  evt.ctrlKey)
+			{
+				trace("按了 ctrl s");
+				alertSave();
+			}
+		}
+		
+		private function alertSave():void
+		{
+			var filecontent:String = msgArr.join("\r\n");
+			var fileRef:FileReference = new FileReference();
+			fileRef.save(filecontent,"dm.txt");
+		}
+		
+		private function showResult():void
+		{
+			var result:String = msgArr.join("\n");
+			resultText.text = result;
+			
+			resultText.visible = true;
+		}
+		
+		private function hideResult():void
+		{
+			resultText.text = "";
+			resultText.visible = false;
 		}
 		
 		private function initHtmlLoader():void
@@ -122,11 +199,12 @@ package
 		
 		private function exceptionHandler(evt:HTMLUncaughtScriptExceptionEvent):void
 		{
-			showOneMessage("JS出错");
+			showOneMessageByLine(0,"JS出错",40);
 		}
 		
 		private function myJSCallAS(str:String):void
 		{
+			msgArr.push(str);
 			showOneMessage(str);
 		}
 		
@@ -137,28 +215,24 @@ package
 		
 		private function showOneMessage(msg:String):void
 		{
-			if (idleLines.length > 0)
-			{
-				var index:int = this.getRandomInt(0,idleLines.length);
-				showOneMessageByLine(idleLines.splice(index,1),msg);
-			}
-			else
-			{
-				trace("没办法显示!")
-			}
+			var index:int = this.getRandomInt(0,idleLines.length-10);
+			var lineNum:int = idleLines.splice(index,1);
+			idleLines.push(lineNum);
+			showOneMessageByLine(lineNum,msg);
 		}
 		
 		/**显示一条弹幕*/
-		private function showOneMessageByLine(lineNum:int,msg:String,size:int=40):void 
+		private function showOneMessageByLine(lineNum:int,msg:String,size:int=40):void
 		{
 			var text:TextField = new TextField();
-			text.filters = [new GlowFilter(0xffffff,1,2,2,255)];
+			text.cacheAsBitmap = true;
 			text.autoSize = TextFieldAutoSize.LEFT;
 			
 			var textFormat:TextFormat = new TextFormat();
 			textFormat.color = this.getArrayRandom(config.color);
 			textFormat.size = size || this.getRandomInt(config.font[0],config.font[1]);
 			textFormat.font = "微软雅黑";
+			textFormat.bold = true;
 			textFormat.align = TextFormatAlign.LEFT;
 			
 			text.setTextFormat(textFormat);
@@ -184,26 +258,10 @@ package
 		
 		private function onLineComplete(lineNum:int,text:DisplayObject):void
 		{
-			idleLines.push(lineNum);
-			
 			if (text.parent)
 			{
 				text.parent.removeChild(text);
 			}
-		}
-		
-		/**
-		 *显示弹幕 
-		 */		
-		private function showText():void
-		{
-			timer.addEventListener(TimerEvent.TIMER,timerHandler);
-			timer.start();
-		}
-		
-		private function timerHandler(evt:TimerEvent):void
-		{
-			
 		}
 		
 		private function getRandomNumber(min:int,max:int):int
@@ -243,6 +301,7 @@ package
 		
 		private function onTweenComplete(time:Number,text:DisplayObject):void
 		{
+			text.cacheAsBitmap = false;
 			if (text.parent)
 			{
 				text.parent.removeChild(text);
